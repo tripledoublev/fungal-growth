@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fungal Growth Generator</title>
+    <meta name="description" content="An interactive fungal growth simulator where you can create and customize beautiful fungal hyphae patterns in real-time.">
+    <meta name="keywords" content="fungal growth, hyphae, mycology, biology, simulation, generative art, interactive">
+    <meta name="author" content="Fungal Growth Generator">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="hyphae.png" type="image/png">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://fungalgrowth.com/">
+    <meta property="og:title" content="Fungal Growth Generator">
+    <meta property="og:description" content="Generate beautiful, customizable fungal hyphae patterns with this interactive simulator.">
+    <meta property="og:image" content="hyphae.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://fungalgrowth.com/">
+    <meta property="twitter:title" content="Fungal Growth Generator">
+    <meta property="twitter:description" content="Generate beautiful, customizable fungal hyphae patterns with this interactive simulator.">
+    <meta property="twitter:image" content="hyphae.png">
+    
+    <!-- Other Meta Tags -->
+    <meta name="theme-color" content="#9900FC">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f8f8;
+            overflow-x: hidden;
+        }
+        
+        .visualization-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #ffffff;
+        }
+        
+        #svg-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .controls-container {
+            padding: 20px;
+            background-color: #f8f8f8;
+        }
+        
+        .quick-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .container {
+            margin-top: 20px;
+        }
+        
+        .controls {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .toggle-controls {
+            width: 100%;
+            padding: 10px;
+            background-color: #9900FC;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .controls-content.collapsed {
+            display: none;
+        }
+        
+        h1, h2 {
+            color: #9900FC;
+        }
+        
+        .param-group {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+        
+        .param-group h3 {
+            margin-top: 0;
+            color: #ac45ff;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .param-group h3::after {
+            content: "▼";
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+        
+        .param-group.collapsed h3::after {
+            transform: rotate(-90deg);
+        }
+        
+        .param-group.collapsed .param-row,
+        .param-group.collapsed .visibility-toggles,
+        .param-group.collapsed .color-controls,
+        .param-group.collapsed .attraction-point,
+        .param-group.collapsed .add-point {
+            display: none;
+        }
+        
+        .param-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .param-label {
+            flex: 1;
+            font-weight: bold;
+        }
+        
+        .param-control {
+            flex: 2;
+            display: flex;
+            align-items: center;
+        }
+        
+        .toggle-control {
+            justify-content: flex-start;
+        }
+        
+        .toggle-control input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .param-value {
+            width: 60px;
+            text-align: right;
+            margin-left: 10px;
+        }
+        
+        .color-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 1px solid #ddd;
+            margin-left: 10px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+        }
+        
+        input[type="color"] {
+            width: 40px;
+            height: 24px;
+        }
+        
+        button {
+            background-color: #9900FC;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background-color: #ac45ff;
+        }
+        
+        button.paused {
+            background-color: #ff6600;
+        }
+        
+        button.paused:hover {
+            background-color: #ff8533;
+        }
+        
+        .buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            height: 4px;
+            width: 100%;
+            background-color: rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            width: 0;
+            background-color: #9900FC;
+            transition: width 0.3s;
+        }
+        
+        .status {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10;
+            font-size: 14px;
+            color: #9900FC;
+            background-color: rgba(255,255,255,0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 0;
+        }
+        
+        .attraction-point {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #eee;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        
+        .point-controls {
+            width: 100%;
+        }
+        
+        .point-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        .remove-point {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .add-point {
+            background-color: #4CAF50;
+            margin-top: 10px;
+        }
+        
+        .visibility-toggles {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        /* Responsive styling */
+        @media (max-width: 900px) {
+            .controls-container {
+                padding: 10px;
+            }
+            
+            .param-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .param-label {
+                margin-bottom: 5px;
+            }
+            
+            .param-control {
+                width: 100%;
+            }
+            
+            .quick-controls {
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: center;
+            }
+            
+            button {
+                margin-right: 0;
+                flex-grow: 1;
+                min-width: 110px;
+            }
+            
+            .visualization-wrapper {
+                height: 90vh;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .controls-container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 24px;
+                text-align: center;
+            }
+            
+            .controls {
+                padding: 10px;
+            }
+            
+            .param-group {
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+            }
+            
+            .quick-controls button {
+                min-width: 100px;
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="visualization-wrapper">
+        <div class="progress">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="status" id="status-display"></div>
+        <div id="svg-container">
+            <!-- SVG will be inserted here -->
+        </div>
+    </div>
+    
+    <div class="controls-container">
+        <h1>Fungal Growth Generator</h1>
+        
+        <div class="quick-controls">
+            <button id="generate">Generate</button>
+            <button id="clear">Clear</button>
+            <button id="randomize">Randomize</button>
+            <button id="export-svg">Export SVG</button>
+        </div>
+        
+        <div class="container">
+            <div class="controls">
+                <button class="toggle-controls" id="toggle-controls">Show/Hide Controls</button>
+                
+                <div class="controls-content">
+                    <div class="param-group">
+                        <h3>Canvas</h3>
+                        <div class="param-row">
+                            <div class="param-label">Width</div>
+                            <div class="param-control">
+                                <input type="range" id="width" min="400" max="2000" step="50" value="800">
+                                <div class="param-value" id="width-value">800</div>
+                            </div>
+                        </div>
+                        <div class="param-row">
+                            <div class="param-label">Height</div>
+                            <div class="param-control">
+                                <input type="range" id="height" min="300" max="1500" step="50" value="600">
+                                <div class="param-value" id="height-value">600</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="param-group">
+                        <h3>Growth Parameters</h3>
+                        <div class="param-row">
+                            <div class="param-label">Initial Hyphae</div>
+                            <div class="param-control">
+                                <input type="range" id="initialHyphae" min="1" max="10" step="1" value="2">
+                                <div class="param-value" id="initialHyphae-value">2</div>
+                            </div>
+                        </div>
+                        <div class="param-row">
+                            <div class="param-label">Iterations</div>
+                            <div class="param-control">
+                                <input type="range" id="iterations" min="50" max="700" step="10" value="100">
+                                <div class="param-value" id="iterations-value">100</div>
+                            </div>
+                        </div>
+                        <div class="param-row">
+                            <div class="param-label">Growth Speed</div>
+                            <div class="param-control">
+                                <input type="range" id="growthSpeed" min="0.5" max="8" step="0.1" value="3.0">
+                                <div class="param-value" id="growthSpeed-value">3.0</div>
+                            </div>
+                        </div>
+                        <div class="param-row">
+                            <div class="param-label">Branch Probability</div>
+                            <div class="param-control">
+                                <input type="range" id="branchProbability" min="0.001" max="0.1" step="0.001" value="0.02">
+                                <div class="param-value" id="branchProbability-value">0.02</div>
+                            </div>
+                        </div>
+                        <div class="param-row">
+                            <div class="param-label">Max Branch Angle (°)</div>
+                            <div class="param-control">
+                                <input type="range" id="maxBranchAngleDegrees" min="10" max="180" step="1" value="120">
+                                <div class="param-value" id="maxBranchAngleDegrees-value">120</div>
+                            </div>
+                        </div>
+                        <div class="param-row">
+                            <div class="param-label">Septa Spacing</div>
+                            <div class="param-control">
+                                <input type="range" id="septaSpacing" min="10" max="200" step="1" value="100">
+                                <div class="param-value" id="septaSpacing-value">100</div>
+                            </div>
+                        </div>
+                        <div class="param-row">
+                            <div class="param-label">Max Hyphae</div>
+                            <div class="param-control">
+                                <input type="range" id="maxHyphae" min="10" max="500" step="10" value="50">
+                                <div class="param-value" id="maxHyphae-value">50</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="param-group">
+                        <h3>Attraction Points</h3>
+                        <div id="attraction-points-container">
+                            <!-- JavaScript will generate attraction point controls here -->
+                        </div>
+                        <button id="add-attraction-point" class="add-point">+ Add Attraction Point</button>
+                    </div>
+                    
+                    <div class="param-group">
+                        <h3>Visibility & Colors</h3>
+                        <div class="visibility-toggles">
+                            <div class="param-row">
+                                <div class="param-label">Show Hyphae</div>
+                                <div class="param-control toggle-control">
+                                    <input type="checkbox" id="show-hyphae" checked>
+                                </div>
+                            </div>
+                            <div class="param-row">
+                                <div class="param-label">Show Septa</div>
+                                <div class="param-control toggle-control">
+                                    <input type="checkbox" id="show-septa" checked>
+                                </div>
+                            </div>
+                            <div class="param-row">
+                                <div class="param-label">Show Tips</div>
+                                <div class="param-control toggle-control">
+                                    <input type="checkbox" id="show-tips" checked>
+                                </div>
+                            </div>
+                            <div class="param-row">
+                                <div class="param-label">Show Spitzenkorper</div>
+                                <div class="param-control toggle-control">
+                                    <input type="checkbox" id="show-spitzenkorper" checked>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="color-controls">
+                            <div class="param-row">
+                                <div class="param-label">Background</div>
+                                <div class="param-control">
+                                    <input type="color" id="background-color" value="#ffffff">
+                                    <div class="color-preview" id="background-preview" style="background-color: #ffffff;"></div>
+                                </div>
+                            </div>
+                            <div class="param-row">
+                                <div class="param-label">Hypha</div>
+                                <div class="param-control">
+                                    <input type="color" id="hypha-color" value="#9900FC">
+                                    <div class="color-preview" id="hypha-preview" style="background-color: #9900FC;"></div>
+                                </div>
+                            </div>
+                            <div class="param-row">
+                                <div class="param-label">Septa</div>
+                                <div class="param-control">
+                                    <input type="color" id="septa-color" value="#ac45ff">
+                                    <div class="color-preview" id="septa-preview" style="background-color: #ac45ff;"></div>
+                                </div>
+                            </div>
+                            <div class="param-row">
+                                <div class="param-label">Tip</div>
+                                <div class="param-control">
+                                    <input type="color" id="tip-color" value="#c47aff">
+                                    <div class="color-preview" id="tip-preview" style="background-color: #c47aff;"></div>
+                                </div>
+                            </div>
+                            <div class="param-row">
+                                <div class="param-label">Spitzenkorper</div>
+                                <div class="param-control">
+                                    <input type="color" id="spitzenkorper-color" value="#ff6600">
+                                    <div class="color-preview" id="spitzenkorper-preview" style="background-color: #ff6600;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="fungal-growth-ui.js"></script>
+</body>
+</html>
